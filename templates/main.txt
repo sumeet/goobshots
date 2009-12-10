@@ -1,0 +1,7 @@
+#!/bin/bash
+# goobshots for Mac -- bind to a hotkey (Quicksilver works well)
+# {{ user.secret }} is *your* key, {{ user.user }}
+echo -n | pbcopy
+rm -f /tmp/x.png
+screencapture -i -s /tmp/x.png
+curl -T /tmp/x.png http://s.goobtown.net/put/{{ user.secret }} | pbcopy
