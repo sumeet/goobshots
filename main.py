@@ -9,17 +9,20 @@ from google.appengine.ext import db
 
 URL = 'http://s.goobtown.net/%s'
 
+
 class ShotHandler(webapp.RequestHandler):
     def get(self, key):
         shot = models.Shot.get(db.Key(key)).get_image()
         self.response.headers['Content-Type'] = utils.detect_mime_from_image_data(shot)
         self.response.out.write(shot)
 
+
 class ThumbHandler(webapp.RequestHandler):
     def get(self, key):
         shot = models.Shot.get(db.Key(key)).thumbnail
         self.response.headers['Content-Type'] = utils.detect_mime_from_image_data(shot)
         self.response.out.write(shot)
+
 
 class PutHandler(webapp.RequestHandler):
     def put(self, key):
