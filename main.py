@@ -12,16 +12,15 @@ URL = 'http://s.goobtown.net/%s'
 
 class ShotHandler(webapp.RequestHandler):
     def get(self, key):
-        shot = models.Shot.get(db.Key(key)).get_image()
-        self.response.headers['Content-Type'] = utils.detect_mime_from_image_data(shot)
-        self.response.out.write(shot)
+        shot = models.Shot.get_by_key(key)
+        if not shot:
+            self.error(404)
+            self.response.out.write("404")
+            return
 
-
-class ThumbHandler(webapp.RequestHandler):
-    def get(self, key):
-        shot = models.Shot.get(db.Key(key)).thumbnail
-        self.response.headers['Content-Type'] = utils.detect_mime_from_image_data(shot)
-        self.response.out.write(shot)
+        image = shot.get_image()
+        self.response.headers['Content-Type'] = utils.detect_mime_from_image_data(image)
+        self.response.out.write(str(image))
 
 
 class PutHandler(webapp.RequestHandler):
@@ -32,8 +31,7 @@ class PutHandler(webapp.RequestHandler):
         self.response.headers['Content-Type'] = 'text/plain'
         self.response.out.write(URL % shot.key())
 
-    def post(self, key):
-        return self.put(key)
+    post = put
 
 class MainHandler(webapp.RequestHandler):
     @utils.require_login
@@ -43,14 +41,13 @@ class MainHandler(webapp.RequestHandler):
         }
 
         self.response.headers['Content-Type'] = 'text/plain'
-        self.response.out.write(utils.render('main.txt', context))
+        self.response.out.write(str(utils.render('main.txt', context)))
 
 def main():
     application = webapp.WSGIApplication(
         [
             ('/', MainHandler),
             ('/put/(.*)', PutHandler),
-            ('/(.*)\.thumb', ThumbHandler),
             ('/(.*)', ShotHandler),
         ],
         debug=False)

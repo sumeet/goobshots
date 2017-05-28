@@ -7,9 +7,9 @@ import itertools
 import random
 import utils
 
-THUMBNAIL_SIZE = 300
 
 GAE_BLOB_LIMIT = 1000*1000  # A little less than 1 MB.
+
 
 class UserProfile(db.Model):
     user = db.UserProperty(required=True)
@@ -21,34 +21,24 @@ class ShotChunk(db.Model):
 
 
 class Shot(db.Model):
+
+    @classmethod
+    def get_by_key(cls, key):
+        try:
+            key = db.Key(key)
+        except db.BadKeyError:
+            return None
+        return cls.get(key)
+
     user = db.UserProperty(required=True)
     image = db.BlobProperty()
     split_image = db.ListProperty(db.Key)
 
-    thumbnail = db.BlobProperty()
     pub_date = db.DateTimeProperty(verbose_name='date published',
                                    auto_now_add=True)
 
-    def set_thumbnail(self, image):
-        image = images.Image(image)
-
-        if image.width >= image.height:
-            image.resize(height=THUMBNAIL_SIZE)
-            p = THUMBNAIL_SIZE / image.width
-            r = random.uniform(0.0, 1.0 - p)
-            image.crop(r, 0.0, r+p, 1.0)
-        else:
-            image.resize(width=THUMBNAIL_SIZE)
-            p = THUMBNAIL_SIZE / image.height
-            r = random.uniform(0.0, 1.0 - p)
-            image.crop(0.0, r, 1.0, r+p)
-
-        self.thumbnail = image.execute_transforms()
-
     def set_image_and_save(self, image):
-
         if len(image) <= GAE_BLOB_LIMIT:
-#            self.set_thumbnail(image)
             self.image = db.Blob(image)
 
         else:
@@ -66,5 +56,5 @@ class Shot(db.Model):
             return self.image
         else:
             # Reassemble the chunked image.
-            return ''.join(ShotChunk.get(chunk_key) for chunk_key in
+            return ''.join(ShotChunk.get(chunk_key).chunk for chunk_key in
                            self.split_image)
