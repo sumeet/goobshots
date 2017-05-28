@@ -27,7 +27,8 @@ class PutHandler(webapp.RequestHandler):
     def put(self, key):
         user = models.UserProfile.all().filter('secret =', key).get().user
         shot = models.Shot(user=user)
-        shot.set_image_and_save(self.request.body)
+        image_chunks = chunk_request_data(self.request, models.GAE_BLOB_LIMIT)
+        shot.set_image_and_save(image_chunks)
         self.response.headers['Content-Type'] = 'text/plain'
         self.response.out.write(URL % shot.key())
 
@@ -52,6 +53,13 @@ def main():
         ],
         debug=False)
     wsgiref.handlers.CGIHandler().run(application)
+
+
+def chunk_request_data(request, chunk_size):
+    total_length = int(request.headers['Content-Length'])
+    for _ in xrange(0, total_length, chunk_size):
+        yield request.body_file.read(chunk_size)
+
 
 
 if __name__ == '__main__':

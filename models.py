@@ -37,24 +37,21 @@ class Shot(db.Model):
     pub_date = db.DateTimeProperty(verbose_name='date published',
                                    auto_now_add=True)
 
-    def set_image_and_save(self, image):
-        if len(image) <= GAE_BLOB_LIMIT:
-            self.image = db.Blob(image)
-
-        else:
-            self.split_image = []
-            # Cut the image into chunks.
-            for chunk in utils.segment(image, GAE_BLOB_LIMIT):
-                shot_chunk = ShotChunk(chunk=chunk)
-                shot_chunk.put()
-                self.split_image.append(shot_chunk.key())
+    def set_image_and_save(self, chunks):
+        self.split_image = []
+        # Cut the image into chunks.
+        for chunk in chunks:
+            shot_chunk = ShotChunk(chunk=chunk)
+            shot_chunk.put()
+            self.split_image.append(shot_chunk.key())
 
         self.put()
 
     def get_image(self):
+        # legacy unchunked images. we only create chunked ones now for a simpler
+        # codepath
         if self.image:
             return self.image
-        else:
-            # Reassemble the chunked image.
-            return ''.join(ShotChunk.get(chunk_key).chunk for chunk_key in
-                           self.split_image)
+        # Reassemble the chunked image.
+        return ''.join(ShotChunk.get(chunk_key).chunk for chunk_key in
+                        self.split_image)
