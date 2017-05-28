@@ -5,3 +5,9 @@ threadsafe: true
 handlers:
 - url: .*
   script: main.app
+- url: /_ah/queue/deferred
+    script: google.appengine.ext.deferred.deferred.application
+    login: admin
+
+builtins:
+- deferred: on

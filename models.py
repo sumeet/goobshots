@@ -1,4 +1,5 @@
 from google.appengine.ext import ndb
+from google.appengine.ext.deferred import defer
 
 
 GAE_BLOB_LIMIT = 1000*1000  # A little less than 1 MB.
@@ -18,6 +19,12 @@ class UserProfile(ndb.Model):
 
 
 class ShotChunk(ndb.Model):
+
+    @classmethod
+    def create(cls, key, chunkstr):
+        cls(chunk=chunkstr, key=key).put()
+
+
     chunk = ndb.BlobProperty(required=True)
 
 
@@ -38,17 +45,12 @@ class Shot(ndb.Model):
     def set_image_and_save(self, chunks):
         self.key = allocate_key(type(self))
         self.split_image = []
-        futures = []
         # Cut the image into chunks.
         for chunk in chunks:
-            shot_chunk = ShotChunk(chunk=chunk, key=allocate_key(ShotChunk))
-            futures.append(shot_chunk.put_async())
-            self.split_image.append(shot_chunk.key)
-
-        futures.append(self.put_async())
-        # wait for all futures to complete
-        for future in futures:
-            future.get_result()
+            shot_chunk_key = allocate_key(ShotChunk)
+            defer(ShotChunk.create, shot_chunk_key, chunk)
+            self.split_image.append(shot_chunk_key)
+        self.put()
 
     def get_image(self):
         # legacy unchunked images. we only create chunked ones now for a simpler
