@@ -15,7 +15,7 @@ def require_login(fn):
         def _checklogin(request_handler, *args, **kwargs):
             user = users.get_current_user()
             if user:
-                if not models.UserProfile.all().filter('user =', user).get():
+                if not models.UserProfile.get_by_user(user):
                     models.UserProfile(user=users.get_current_user(), secret=md5(os.urandom(3000)).hexdigest()).put()
                 return view_func(request_handler, *args, **kwargs)
             else:

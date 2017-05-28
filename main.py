@@ -5,7 +5,6 @@ from google.appengine.ext import webapp
 from google.appengine.api import users
 import utils
 import models
-from google.appengine.ext import db
 
 URL = 'http://s.goobtown.net/%s'
 
@@ -25,12 +24,12 @@ class ShotHandler(webapp.RequestHandler):
 
 class PutHandler(webapp.RequestHandler):
     def put(self, key):
-        user = models.UserProfile.all().filter('secret =', key).get().user
+        user = models.UserProfile.get_by_secret(key).user
         shot = models.Shot(user=user)
         image_chunks = chunk_request_data(self.request, models.GAE_BLOB_LIMIT)
         shot.set_image_and_save(image_chunks)
         self.response.headers['Content-Type'] = 'text/plain'
-        self.response.out.write(URL % shot.key())
+        self.response.out.write(URL % shot.key.urlsafe())
 
     post = put
 
@@ -38,21 +37,11 @@ class MainHandler(webapp.RequestHandler):
     @utils.require_login
     def get(self):
         context = {
-            'user': models.UserProfile.all().filter('user =', users.get_current_user()).get(),
+            'user': models.UserProfile.get_by_user(users.get_current_user()),
         }
 
         self.response.headers['Content-Type'] = 'text/plain'
         self.response.out.write(str(utils.render('main.txt', context)))
-
-def main():
-    application = webapp.WSGIApplication(
-        [
-            ('/', MainHandler),
-            ('/put/(.*)', PutHandler),
-            ('/(.*)', ShotHandler),
-        ],
-        debug=False)
-    wsgiref.handlers.CGIHandler().run(application)
 
 
 def chunk_request_data(request, chunk_size):
@@ -61,6 +50,10 @@ def chunk_request_data(request, chunk_size):
         yield request.body_file.read(chunk_size)
 
 
-
-if __name__ == '__main__':
-    main()
+app = webapp.WSGIApplication(
+    [
+        ('/', MainHandler),
+        ('/put/(.*)', PutHandler),
+        ('/(.*)', ShotHandler),
+    ],
+    debug=False)
